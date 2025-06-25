@@ -27,7 +27,6 @@ class PresentationRequest(BaseModel):
 
 app = FastAPI()
 
-
 def generate_pdf(data: PresentationRequest) -> io.BytesIO:
     """Create a PDF in memory from the presentation data."""
     buffer = io.BytesIO()
@@ -49,6 +48,7 @@ def generate_pdf(data: PresentationRequest) -> io.BytesIO:
                 response = requests.get(slide.image_url, timeout=5)
                 response.raise_for_status()
                 image_data = io.BytesIO(response.content)
+                image_data.name = "image.jpg"  # <--- Критически важно!
                 pdf.drawImage(
                     image_data,
                     width - 340,
@@ -57,8 +57,8 @@ def generate_pdf(data: PresentationRequest) -> io.BytesIO:
                     preserveAspectRatio=True,
                     mask='auto'
                 )
-            except requests.RequestException:
-                # Ignore image errors and continue without it
+            except Exception:
+                # Если картинка не загрузилась — просто пропускаем
                 pass
         pdf.showPage()
 
@@ -84,13 +84,9 @@ def create_presentation(data: PresentationRequest):
             media_type='application/pdf',
             headers=headers
         )
-
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
 if __name__ == "__main__":
-    # Allow the service to be run directly with `python app.py`
     import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=8000)
