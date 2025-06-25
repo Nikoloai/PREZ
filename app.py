@@ -7,6 +7,7 @@ from typing import List, Optional
 import io
 import requests
 from reportlab.lib.pagesizes import landscape, letter
+from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 
 # Pydantic models for request validation
@@ -43,22 +44,22 @@ def generate_pdf(data: PresentationRequest) -> io.BytesIO:
             text_object.textLine(line)
         pdf.drawText(text_object)
 
-        if slide.image_url:
-            try:
-                response = requests.get(slide.image_url, timeout=5)
-                response.raise_for_status()
-                image_data = io.BytesIO(response.content)
-                image_data.name = "image.jpg"  # <--- Критически важно!
-                pdf.drawImage(
-                    image_data,
-                    width - 340,
-                    50,
-                    width=300,
-                    preserveAspectRatio=True,
-                    mask='auto'
-                )
-            except Exception:
-                # Если картинка не загрузилась — просто пропускаем
+     if slide.image_url:
+    try:
+        response = requests.get(slide.image_url, timeout=5)
+        response.raise_for_status()
+        image_data = io.BytesIO(response.content)
+        img_reader = ImageReader(image_data)
+        pdf.drawImage(
+            img_reader,
+            width - 340,
+            50,
+            width=300,
+            preserveAspectRatio=True,
+            mask='auto'
+        )
+    except requests.RequestException:
+        pass
                 pass
         pdf.showPage()
 
